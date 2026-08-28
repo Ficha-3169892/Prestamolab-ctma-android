@@ -10,13 +10,16 @@ El problema es que no se tiene un control y un inventario efectivo sobre las her
 
 - **Solicitante demo:** Será la persona que llegará a solicitar el préstamo de una o varias de las herramientas disponibles, registrando sus datos básicos de forma simulada (sin carnet real ni base de datos persistente, ya que es un prototipo educativo).
 
-- **Gestor simulado:** Será la persona encargada de revisar los cambios de estado del préstamo, si se devolvió o no la herramienta solicitada, si se encuentra en el mismo estado en el que se prestó o si presenta algún daño, y la encargada de 🔧 *(pendiente: reemplazar "devolver el carnet a su debido portador" por una acción simulada — ej. "liberar el registro del solicitante")* una vez entregada la herramienta.
+- **Gestor simulado:** Será la persona encargada de revisar los cambios de estado del préstamo, si se devolvió o no la herramienta solicitada, si se encuentra en el mismo estado en el que se prestó o si presenta algún daño, y la encargada de liberar el registro del solicitante una vez entregada la herramienta.
 
 - **Instructor:** Es la persona que va a proporcionar datos sobre las herramientas y va a validar que todos los procesos sean ejecutados correctamente.
 
 ### Necesidades
 
-🔧 *(pendiente — se completa junto con las historias de usuario en la Actividad 2)*
+- Ver qué equipos y herramientas están disponibles antes de solicitarlos.
+- Registrar una solicitud de préstamo sin errores ni duplicados.
+- Consultar el estado de las solicitudes propias.
+- Cancelar una solicitud mientras siga vigente.
 
 ### Restricciones
 
@@ -40,7 +43,14 @@ El valor esperado del producto es tener un mayor control sobre el inventario y d
 
 ## Historias de usuario
 
-🔧 *(pendiente — Actividad 2, en construcción con el equipo)*
+1. Quiero poder consultar el catálogo de herramientas y equipos electrónicos disponibles para su uso.
+2. Quiero poder ver los detalles y las propiedades de las herramientas o de los equipos electrónicos disponibles para su uso.
+3. Quiero poder hacer la solicitud de un equipo electrónico o herramienta que esté disponible en el momento para su uso.
+4. Quiero poder cancelar una solicitud de uso de herramientas o equipos porque no las voy a necesitar.
+5. Quiero poder consultar mis solicitudes de préstamo y ver en qué estado se encuentran actualmente, para saber si siguen pendientes, ya fueron entregadas o fueron canceladas.
+6. Quiero que el sistema valide los datos del formulario de solicitud (destino, propósito y duración) antes de guardar, para evitar registrar solicitudes incompletas o con datos fuera de los límites permitidos.
+
+🔧 *(pendiente — Actividad 2: falta redactar el criterio de aceptación verificable de cada historia)*
 
 ## Backlog futuro (fuera del alcance de este incremento)
 
