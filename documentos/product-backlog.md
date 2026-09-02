@@ -101,7 +101,11 @@ disponible (RN-07).
 
 ## Backlog futuro (fuera del alcance de este incremento)
 
-- Quiero poder consultar las solicitudes disponibles actualmente tanto de herramientas como de equipos electrónicos y poder validarlas y aceptarlas o rechazarlas según se considere mejor.
-- Quiero poder finalizar una solicitud cuando ya esté devuelta la herramienta o equipo y después de asegurarme de que esté todo en orden.
-- Quiero poder hacer reportes del estado de las herramientas y de poder hacer seguimiento de los últimos usos que se le han dado (a qué instructor o aprendiz).
-- Quiero poder reservar una herramienta o equipo por si en algún momento futuro voy a necesitar sí o sí asegurarlo ese día para usarlo.
+- Quiero poder consultar las solicitudes disponibles actualmente tanto de herramientas como de 
+equipos electrónicos y poder validarlas y aceptarlas o rechazarlas según se considere mejor.
+- Quiero poder finalizar una solicitud cuando ya esté devuelta la herramienta o equipo y después de 
+asegurarme de que esté todo en orden.
+- Quiero poder hacer reportes del estado de las herramientas y de poder hacer seguimiento de los 
+últimos usos que se le han dado (a qué instructor o aprendiz).
+- Quiero poder reservar una herramienta o equipo por si en algún momento futuro voy a necesitar sí 
+o sí asegurarlo ese día para usarlo.

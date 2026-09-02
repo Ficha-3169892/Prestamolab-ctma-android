@@ -36,8 +36,8 @@ pruebas de software sobre un mismo producto.
 
 ## Estado actual
 
-Fase 1 — Scrum en construcción (Actividad 1 cerrada; Actividad 2 en progreso: historias definidas, 
-faltan criterios de aceptación).
+Fase 1 — Scrum en construcción (Actividad 1 cerrada; Actividad 2 cerrada: backlog, historias de 
+usuario y criterios de aceptación).
 
 ## Estructura del repositorio
 
