@@ -66,37 +66,37 @@ veo nombre, categoría y estado (DISPONIBLE, RESERVADO, PRESTADO).
 
 ### HU-02: Ver detalle del equipo (Prioridad: Alta | Riesgo: Medio)
 Como usuario, quiero seleccionar un equipo para consultar su información detallada.
-- **CA-01** Dado que presiono un equipo del catálogo, el sistema me navega al detalle pasando su 
+- **CA-03** Dado que presiono un equipo del catálogo, el sistema me navega al detalle pasando su 
 `equipoId`.
-- **CA-02** Dado un `equipoId` inexistente, la interfaz muestra un estado recuperable y no se cierra
+- **CA-04** Dado un `equipoId` inexistente, la interfaz muestra un estado recuperable y no se cierra
 abruptamente (RN-08).
 
 ### HU-03: Registrar solicitud de préstamo (Prioridad: Alta | Riesgo: Alto)
 Como usuario, quiero solicitar un equipo disponible para usarlo en mi formación.
-- **CA-01** Dado un equipo en estado DISPONIBLE, al diligenciar el formulario y guardar, se crea 
+- **CA-05** Dado un equipo en estado DISPONIBLE, al diligenciar el formulario y guardar, se crea 
 una sola solicitud en estado SOLICITADA y el equipo pasa a RESERVADO (RN-01, RN-06).
-- **CA-02** Si el equipo está RESERVADO o PRESTADO, el sistema rechaza la solicitud (RN-01).
-- **CA-03** Si el usuario pulsa rápidamente dos veces "Guardar", el sistema bloquea la acción y 
+- **CA-06** Si el equipo está RESERVADO o PRESTADO, el sistema rechaza la solicitud (RN-01).
+- **CA-07** Si el usuario pulsa rápidamente dos veces "Guardar", el sistema bloquea la acción y 
 crea únicamente 1 solicitud (RN-05).
 
 ### HU-04: Validar datos de formulario (Prioridad: Alta | Riesgo: Alto)
 Como sistema, quiero validar los campos antes de guardar para evitar datos erróneos.
-- **CA-01** Si el ambiente o destino está vacío, no permite guardar y conserva los demás datos (RN-02).
-- **CA-02** El propósito debe tener entre 10 y 180 caracteres. Fuera de este rango, muestra error 
+- **CA-08** Si el ambiente o destino está vacío, no permite guardar y conserva los demás datos (RN-02).
+- **CA-09** El propósito debe tener entre 10 y 180 caracteres. Fuera de este rango, muestra error 
 específico (RN-03).
-- **CA-03** La duración debe ser entre 1 y 8 horas. Fuera de este rango, muestra error específico 
+- **CA-10** La duración debe ser entre 1 y 8 horas. Fuera de este rango, muestra error específico 
 (RN-04).
 
 ### HU-05: Consultar mis solicitudes (Prioridad: Media | Riesgo: Medio)
 Como usuario, quiero ver la lista de solicitudes registradas y su estado actual.
-- **CA-01** Puedo ver mis solicitudes listadas indicando el equipo, destino y estado actual 
+- **CA-11** Puedo ver mis solicitudes listadas indicando el equipo, destino y estado actual 
 (SOLICITADA, CANCELADA, etc.).
 
 ### HU-06: Cancelar solicitud (Prioridad: Media | Riesgo: Medio)
 Como usuario, quiero cancelar una solicitud que ya no necesito.
-- **CA-01** Dado una solicitud en estado SOLICITADA, al presionar "Cancelar", la solicitud cambia a 
+- **CA-12** Dado una solicitud en estado SOLICITADA, al presionar "Cancelar", la solicitud cambia a 
 CANCELADA y el equipo vuelve a estar DISPONIBLE (RN-07).
-- **CA-02** Si la solicitud está en un estado diferente a SOLICITADA, la opción de cancelar no está 
+- **CA-13** Si la solicitud está en un estado diferente a SOLICITADA, la opción de cancelar no está 
 disponible (RN-07).
 
 ## Backlog futuro (fuera del alcance de este incremento)
