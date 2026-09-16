@@ -20,4 +20,13 @@ interface ObjetoPrestamoDao {
 
     @Query("DELETE FROM objetos_prestamo WHERE id = :id")
     suspend fun eliminarPorId(id: Int)
+
+    @Query("DELETE FROM objetos_prestamo")
+    suspend fun eliminarTodo()
+
+    @Query("SELECT * FROM objetos_prestamo ORDER BY nombre ASC")
+    suspend fun obtenerOrdenadosPorNombre(): List<ObjetoPrestamo>
+
+    @Query("SELECT * FROM objetos_prestamo WHERE nombre LIKE '%' || :busqueda || '%'")
+    suspend fun buscarPorNombre(busqueda: String): List<ObjetoPrestamo>
 }
