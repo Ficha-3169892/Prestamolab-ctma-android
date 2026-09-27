@@ -71,6 +71,9 @@ dependencies {
     ksp(libs.androidx.room3.compiler)
     implementation(libs.androidx.sqlite.bundled)
 
+    // DataStore Preferences
+    implementation(libs.androidx.datastore.preferences)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.junit)
