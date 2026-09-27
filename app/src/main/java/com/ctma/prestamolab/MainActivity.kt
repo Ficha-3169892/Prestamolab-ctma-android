@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.ctma.prestamolab.data.datastore.UserPreferencesRepository
 import com.ctma.prestamolab.data.local.AppDatabase
 import com.ctma.prestamolab.data.repository.RoomRepository
 import com.ctma.prestamolab.ui.screen.HomeScreen
@@ -22,8 +23,15 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 val db = AppDatabase.getInstance(applicationContext)
-                val repository = RoomRepository(db.objetoPrestamoDao())
-                return PrestamoViewModel(roomRepository = repository) as T
+                val repository = RoomRepository(
+                    objetoPrestamoDao = db.objetoPrestamoDao(),
+                    equipoDao = db.equipoDao()
+                )
+                val preferencesRepo = UserPreferencesRepository(applicationContext)
+                return PrestamoViewModel(
+                    roomRepository = repository,
+                    userPreferencesRepository = preferencesRepo
+                ) as T
             }
         }
     }

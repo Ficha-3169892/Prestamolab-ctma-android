@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ctma.prestamolab.data.datastore.UserPreferencesRepository
 import com.ctma.prestamolab.data.local.ObjetoPrestamo
 import com.ctma.prestamolab.data.model.Equipo
 import com.ctma.prestamolab.data.model.Solicitud
@@ -16,7 +17,8 @@ import kotlinx.coroutines.launch
 
 class PrestamoViewModel(
     private val inMemoryRepository: InMemoryRepository = InMemoryRepository(),
-    private val roomRepository: RoomRepository? = null
+    private val roomRepository: RoomRepository? = null,
+    private val userPreferencesRepository: UserPreferencesRepository? = null
 ) : ViewModel() {
 
     var equipos = mutableStateListOf<Equipo>()
@@ -29,18 +31,36 @@ class PrestamoViewModel(
         private set
 
     init {
-        cargarCatalogo()
+        inicializarDatos()
+        observarEquipos()
         observarSolicitudes()
     }
 
-    private fun cargarCatalogo() {
-        equipos.clear()
-        equipos.addAll(inMemoryRepository.obtenerEquipos())
+    private fun inicializarDatos() {
+        if (roomRepository != null) {
+            viewModelScope.launch {
+                roomRepository.sembrarEquiposSiEstaVacio()
+            }
+        }
+    }
+
+    private fun observarEquipos() {
+        if (roomRepository == null) {
+            equipos.clear()
+            equipos.addAll(inMemoryRepository.obtenerEquipos())
+            return
+        }
+
+        viewModelScope.launch {
+            roomRepository.obtenerTodosLosEquipos().collectLatest { listaEquipos ->
+                equipos.clear()
+                equipos.addAll(listaEquipos)
+            }
+        }
     }
 
     private fun observarSolicitudes() {
         if (roomRepository == null) {
-            // Fallback para modo diseño o si no se provee repo
             solicitudes.clear()
             solicitudes.addAll(inMemoryRepository.obtenerSolicitudes())
             return
@@ -64,12 +84,21 @@ class PrestamoViewModel(
             mensajeError = "Todos los campos son obligatorios"
             return false
         }
+        if (proposito.length !in 10..180) {
+            mensajeError = "El propósito debe tener entre 10 y 180 caracteres"
+            return false
+        }
         if (duracionHoras !in 1..8) {
             mensajeError = "La duración debe ser entre 1 y 8 horas"
             return false
         }
 
         viewModelScope.launch {
+            userPreferencesRepository?.guardarPreferencias(
+                prestatario = proposito,
+                ambiente = ambienteDestino
+            )
+
             if (roomRepository != null) {
                 roomRepository.guardarPrestamo(
                     equipoId = equipo.id,
@@ -78,7 +107,6 @@ class PrestamoViewModel(
                     prestatario = "$ambienteDestino ($proposito)"
                 )
             } else {
-                // Fallback in memory
                 val nuevaSolicitud = Solicitud(
                     id = (solicitudes.size + 1).toString(),
                     equipoId = equipo.id,
@@ -89,9 +117,10 @@ class PrestamoViewModel(
                     estado = "PENDIENTE"
                 )
                 inMemoryRepository.guardarSolicitud(nuevaSolicitud)
+                inMemoryRepository.actualizarEstadoEquipo(equipo.id, "EN_USO")
+                equipos.clear()
+                equipos.addAll(inMemoryRepository.obtenerEquipos())
             }
-            inMemoryRepository.actualizarEstadoEquipo(equipo.id, "EN_USO")
-            cargarCatalogo()
         }
 
         mensajeError = null
@@ -101,26 +130,24 @@ class PrestamoViewModel(
     fun marcarComoEntregado(solicitud: Solicitud) {
         viewModelScope.launch {
             if (roomRepository != null) {
-                // Buscamos el objeto original para actualizarlo
-                // Como mapeamos ID de String a Int, intentamos convertirlo
                 val idInt = solicitud.id.toIntOrNull()
                 if (idInt != null) {
                     val actual = solicitudesRaw.find { it.id == idInt }
                     if (actual != null) {
-                        roomRepository.actualizarEstado(actual, "ENTREGADO")
+                        roomRepository.actualizarEstadoSolicitud(actual, "ENTREGADO")
                     }
                 }
+            } else {
+                inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
+                equipos.clear()
+                equipos.addAll(inMemoryRepository.obtenerEquipos())
             }
-            inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
-            cargarCatalogo()
         }
     }
 
     private var solicitudesRaw = listOf<ObjetoPrestamo>()
-    
-    // Extensión para mapear
+
     private fun ObjetoPrestamo.toSolicitud(): Solicitud {
-        // Guardamos la lista raw para poder actualizar luego por ID
         synchronized(this@PrestamoViewModel) {
             val currentRaw = solicitudesRaw.toMutableList()
             currentRaw.removeAll { it.id == this.id }
@@ -144,11 +171,13 @@ class PrestamoViewModel(
             if (roomRepository != null) {
                 val idInt = solicitud.id.toIntOrNull()
                 if (idInt != null) {
-                    roomRepository.eliminar(idInt)
+                    roomRepository.eliminarSolicitud(idInt, solicitud.equipoId)
                 }
+            } else {
+                inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
+                equipos.clear()
+                equipos.addAll(inMemoryRepository.obtenerEquipos())
             }
-            inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
-            cargarCatalogo()
         }
     }
 
