@@ -1,9 +1,5 @@
 package com.ctma.prestamolab.ui.viewmodel
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ctma.prestamolab.data.datastore.UserPreferencesRepository
@@ -12,7 +8,12 @@ import com.ctma.prestamolab.data.model.Equipo
 import com.ctma.prestamolab.data.model.Solicitud
 import com.ctma.prestamolab.data.repository.InMemoryRepository
 import com.ctma.prestamolab.data.repository.RoomRepository
-import kotlinx.coroutines.flow.collectLatest
+import com.ctma.prestamolab.ui.state.PrestamoUiState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class PrestamoViewModel(
@@ -21,22 +22,9 @@ class PrestamoViewModel(
     private val userPreferencesRepository: UserPreferencesRepository? = null
 ) : ViewModel() {
 
-    var equipos = mutableStateListOf<Equipo>()
-        private set
-
-    var solicitudes = mutableStateListOf<Solicitud>()
-        private set
-
-    var mensajeError by mutableStateOf<String?>(null)
-        private set
+    private val _mensajeErrorFormulario = MutableStateFlow<String?>(null)
 
     init {
-        inicializarDatos()
-        observarEquipos()
-        observarSolicitudes()
-    }
-
-    private fun inicializarDatos() {
         if (roomRepository != null) {
             viewModelScope.launch {
                 roomRepository.sembrarEquiposSiEstaVacio()
@@ -44,105 +32,35 @@ class PrestamoViewModel(
         }
     }
 
-    private fun observarEquipos() {
-        if (roomRepository == null) {
-            equipos.clear()
-            equipos.addAll(inMemoryRepository.obtenerEquipos())
-            return
-        }
-
-        viewModelScope.launch {
-            roomRepository.obtenerTodosLosEquipos().collectLatest { listaEquipos ->
-                equipos.clear()
-                equipos.addAll(listaEquipos)
+    val uiState: StateFlow<PrestamoUiState> = if (roomRepository != null) {
+        combine(
+            roomRepository.obtenerTodosLosEquipos(),
+            roomRepository.obtenerTodasLasSolicitudes(),
+            _mensajeErrorFormulario
+        ) { listaEquipos, listaSolicitudesLocal, errorFormulario ->
+            val solicitudesMapeadas = listaSolicitudesLocal.map { it.toSolicitud() }
+            if (listaEquipos.isEmpty()) {
+                PrestamoUiState.Vacio
+            } else {
+                PrestamoUiState.Exito(
+                    equipos = listaEquipos,
+                    solicitudes = solicitudesMapeadas,
+                    mensajeErrorFormulario = errorFormulario
+                )
             }
-        }
-    }
-
-    private fun observarSolicitudes() {
-        if (roomRepository == null) {
-            solicitudes.clear()
-            solicitudes.addAll(inMemoryRepository.obtenerSolicitudes())
-            return
-        }
-
-        viewModelScope.launch {
-            roomRepository.obtenerTodasLasSolicitudes().collectLatest { listaLocal ->
-                solicitudes.clear()
-                solicitudes.addAll(listaLocal.map { it.toSolicitud() })
-            }
-        }
-    }
-
-    fun solicitarPrestamo(
-        equipo: Equipo,
-        ambienteDestino: String,
-        proposito: String,
-        duracionHoras: Int
-    ): Boolean {
-        if (ambienteDestino.isBlank() || proposito.isBlank()) {
-            mensajeError = "Todos los campos son obligatorios"
-            return false
-        }
-        if (proposito.length !in 10..180) {
-            mensajeError = "El propósito debe tener entre 10 y 180 caracteres"
-            return false
-        }
-        if (duracionHoras !in 1..8) {
-            mensajeError = "La duración debe ser entre 1 y 8 horas"
-            return false
-        }
-
-        viewModelScope.launch {
-            userPreferencesRepository?.guardarPreferencias(
-                prestatario = proposito,
-                ambiente = ambienteDestino
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = PrestamoUiState.Cargando
+        )
+    } else {
+        MutableStateFlow(
+            PrestamoUiState.Exito(
+                equipos = inMemoryRepository.obtenerEquipos(),
+                solicitudes = inMemoryRepository.obtenerSolicitudes(),
+                mensajeErrorFormulario = _mensajeErrorFormulario.value
             )
-
-            if (roomRepository != null) {
-                roomRepository.guardarPrestamo(
-                    equipoId = equipo.id,
-                    nombre = equipo.nombre,
-                    categoria = equipo.categoria,
-                    prestatario = "$ambienteDestino ($proposito)"
-                )
-            } else {
-                val nuevaSolicitud = Solicitud(
-                    id = (solicitudes.size + 1).toString(),
-                    equipoId = equipo.id,
-                    equipoNombre = equipo.nombre,
-                    ambienteDestino = ambienteDestino,
-                    proposito = proposito,
-                    duracionHoras = duracionHoras,
-                    estado = "PENDIENTE"
-                )
-                inMemoryRepository.guardarSolicitud(nuevaSolicitud)
-                inMemoryRepository.actualizarEstadoEquipo(equipo.id, "EN_USO")
-                equipos.clear()
-                equipos.addAll(inMemoryRepository.obtenerEquipos())
-            }
-        }
-
-        mensajeError = null
-        return true
-    }
-
-    fun marcarComoEntregado(solicitud: Solicitud) {
-        viewModelScope.launch {
-            if (roomRepository != null) {
-                val idInt = solicitud.id.toIntOrNull()
-                if (idInt != null) {
-                    val actual = solicitudesRaw.find { it.id == idInt }
-                    if (actual != null) {
-                        roomRepository.actualizarEstadoSolicitud(actual, "ENTREGADO")
-                    }
-                }
-            } else {
-                inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
-                equipos.clear()
-                equipos.addAll(inMemoryRepository.obtenerEquipos())
-            }
-        }
+        )
     }
 
     private var solicitudesRaw = listOf<ObjetoPrestamo>()
@@ -166,6 +84,73 @@ class PrestamoViewModel(
         )
     }
 
+    fun solicitarPrestamo(
+        equipo: Equipo,
+        ambienteDestino: String,
+        proposito: String,
+        duracionHoras: Int
+    ): Boolean {
+        if (ambienteDestino.isBlank() || proposito.isBlank()) {
+            _mensajeErrorFormulario.value = "Todos los campos son obligatorios"
+            return false
+        }
+        if (proposito.length !in 10..180) {
+            _mensajeErrorFormulario.value = "El propósito debe tener entre 10 y 180 caracteres"
+            return false
+        }
+        if (duracionHoras !in 1..8) {
+            _mensajeErrorFormulario.value = "La duración debe ser entre 1 y 8 horas"
+            return false
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository?.guardarPreferencias(
+                prestatario = proposito,
+                ambiente = ambienteDestino
+            )
+
+            if (roomRepository != null) {
+                roomRepository.guardarPrestamo(
+                    equipoId = equipo.id,
+                    nombre = equipo.nombre,
+                    categoria = equipo.categoria,
+                    prestatario = "$ambienteDestino ($proposito)"
+                )
+            } else {
+                val nuevaSolicitud = Solicitud(
+                    id = System.currentTimeMillis().toString(),
+                    equipoId = equipo.id,
+                    equipoNombre = equipo.nombre,
+                    ambienteDestino = ambienteDestino,
+                    proposito = proposito,
+                    duracionHoras = duracionHoras,
+                    estado = "PENDIENTE"
+                )
+                inMemoryRepository.guardarSolicitud(nuevaSolicitud)
+                inMemoryRepository.actualizarEstadoEquipo(equipo.id, "EN_USO")
+            }
+        }
+
+        _mensajeErrorFormulario.value = null
+        return true
+    }
+
+    fun marcarComoEntregado(solicitud: Solicitud) {
+        viewModelScope.launch {
+            if (roomRepository != null) {
+                val idInt = solicitud.id.toIntOrNull()
+                if (idInt != null) {
+                    val actual = solicitudesRaw.find { it.id == idInt }
+                    if (actual != null) {
+                        roomRepository.actualizarEstadoSolicitud(actual, "ENTREGADO")
+                    }
+                }
+            } else {
+                inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
+            }
+        }
+    }
+
     fun cancelarSolicitud(solicitud: Solicitud) {
         viewModelScope.launch {
             if (roomRepository != null) {
@@ -175,13 +160,11 @@ class PrestamoViewModel(
                 }
             } else {
                 inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
-                equipos.clear()
-                equipos.addAll(inMemoryRepository.obtenerEquipos())
             }
         }
     }
 
     fun limpiarError() {
-        mensajeError = null
+        _mensajeErrorFormulario.value = null
     }
 }
