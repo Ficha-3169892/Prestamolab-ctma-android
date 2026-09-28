@@ -43,7 +43,12 @@ import com.ctma.prestamolab.ui.theme.PrestamoLabTheme
 import com.ctma.prestamolab.ui.viewmodel.PrestamoViewModel
 
 @Composable
-fun HomeScreen(viewModel: PrestamoViewModel) {
+fun HomeScreen(
+    viewModel: PrestamoViewModel,
+    userRole: String = "APRENDIZ",
+    userEmail: String = "aprendiz@formacion.ctma",
+    onLogout: () -> Unit = {}
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val uiState = state) {
@@ -83,8 +88,11 @@ fun HomeScreen(viewModel: PrestamoViewModel) {
                 equipos = uiState.equipos,
                 solicitudes = uiState.solicitudes,
                 mensajeError = uiState.mensajeErrorFormulario,
-                onSolicitarPrestamo = { equipo, ambiente, proposito, hrs ->
-                    viewModel.solicitarPrestamo(equipo, ambiente, proposito, hrs)
+                userRole = userRole,
+                userEmail = userEmail,
+                onLogout = onLogout,
+                onSolicitarPrestamo = { equipo, ambiente, proposito, hrs, evidencia ->
+                    viewModel.solicitarPrestamo(equipo, ambiente, proposito, hrs, evidencia)
                 },
                 onCancelarSolicitud = { solicitud ->
                     viewModel.cancelarSolicitud(solicitud)
@@ -106,7 +114,10 @@ fun HomeScreenContent(
     equipos: List<Equipo>,
     solicitudes: List<Solicitud>,
     mensajeError: String?,
-    onSolicitarPrestamo: (Equipo, String, String, Int) -> Boolean,
+    userRole: String,
+    userEmail: String,
+    onLogout: () -> Unit,
+    onSolicitarPrestamo: (Equipo, String, String, Int, String?) -> Boolean,
     onCancelarSolicitud: (Solicitud) -> Unit,
     onMarcarEntregado: (Solicitud) -> Unit,
     onLimpiarError: () -> Unit
@@ -118,21 +129,29 @@ fun HomeScreenContent(
     var ambiente by remember { mutableStateOf("") }
     var proposito by remember { mutableStateOf("") }
     var duracionText by remember { mutableStateOf("1") }
+    var evidenciaUriText by remember { mutableStateOf("content://camera/evidence_default.jpg") }
 
     Scaffold(
         topBar = {
             Column {
-                TopAppBar(title = { Text("PréstamoLab CTMA") })
+                TopAppBar(
+                    title = { Text("PréstamoLab CTMA (${if (userRole == "ADMIN") "Administrador" else "Aprendiz"})") },
+                    actions = {
+                        TextButton(onClick = onLogout) {
+                            Text("Salir", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
                 TabRow(selectedTabIndex = tabIndex) {
                     Tab(
                         selected = tabIndex == 0,
                         onClick = { tabIndex = 0 },
-                        text = { Text("Equipos") }
+                        text = { Text("Catálogo Equipos") }
                     )
                     Tab(
                         selected = tabIndex == 1,
                         onClick = { tabIndex = 1 },
-                        text = { Text("Solicitudes (${solicitudes.count { it.estado == "PENDIENTE" }})") }
+                        text = { Text(if (userRole == "ADMIN") "Todas las Solicitudes" else "Mis Solicitudes") }
                     )
                 }
             }
@@ -144,6 +163,13 @@ fun HomeScreenContent(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
+            Text(
+                text = "Sesión: $userEmail [$userRole]",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
             if (tabIndex == 0) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -153,7 +179,7 @@ fun HomeScreenContent(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
-                                if (equipo.estado == "DISPONIBLE") {
+                                if (userRole == "APRENDIZ" && equipo.estado == "DISPONIBLE") {
                                     equipoSeleccionado = equipo
                                 } else {
                                     equipoDetalle = equipo
@@ -168,6 +194,13 @@ fun HomeScreenContent(
                                     text = "Estado: ${equipo.estado}",
                                     color = if (equipo.estado == "DISPONIBLE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
+                                if (userRole == "ADMIN") {
+                                    Text(
+                                        text = "[Modo Admin: Gestión de Inventario habilitada]",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
                             }
                         }
                     }
@@ -186,7 +219,7 @@ fun HomeScreenContent(
                                 Text(text = "Duración: ${solicitud.duracionHoras} hrs")
                                 Text(text = "Estado: ${solicitud.estado}", style = MaterialTheme.typography.bodyMedium)
 
-                                if (solicitud.estado == "PENDIENTE") {
+                                if (userRole == "APRENDIZ" && solicitud.estado == "PENDIENTE") {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -201,6 +234,12 @@ fun HomeScreenContent(
                                             Text("Marcar Entregado")
                                         }
                                     }
+                                } else if (userRole == "ADMIN") {
+                                    Text(
+                                        text = "[Control Administrativo: Visualizando registro de préstamo global]",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.tertiary
+                                    )
                                 }
                             }
                         }
@@ -215,7 +254,7 @@ fun HomeScreenContent(
                     equipoSeleccionado = null
                     onLimpiarError()
                 },
-                title = { Text("Solicitar: ${equipo.nombre}") },
+                title = { Text("Solicitar Préstamo: ${equipo.nombre}") },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
@@ -236,6 +275,12 @@ fun HomeScreenContent(
                             label = { Text("Duración (1-8 horas)") },
                             modifier = Modifier.fillMaxWidth()
                         )
+                        OutlinedTextField(
+                            value = evidenciaUriText,
+                            onValueChange = { evidenciaUriText = it },
+                            label = { Text("Evidencia Fotográfica (URI cámara)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         mensajeError?.let { err ->
                             Text(text = err, color = MaterialTheme.colorScheme.error)
                         }
@@ -245,7 +290,7 @@ fun HomeScreenContent(
                     Button(
                         onClick = {
                             val hrs = duracionText.toIntOrNull() ?: 0
-                            val ok = onSolicitarPrestamo(equipo, ambiente, proposito, hrs)
+                            val ok = onSolicitarPrestamo(equipo, ambiente, proposito, hrs, evidenciaUriText)
                             if (ok) {
                                 equipoSeleccionado = null
                                 ambiente = ""
@@ -254,7 +299,7 @@ fun HomeScreenContent(
                             }
                         }
                     ) {
-                        Text("Confirmar Préstamo")
+                        Text("Confirmar con Cámara")
                     }
                 },
                 dismissButton = {
@@ -271,10 +316,11 @@ fun HomeScreenContent(
                     Column {
                         Text(text = "Nombre: ${equipo.nombre}")
                         Text(text = "Ubicación: ${equipo.ubicacion}")
+                        Text(text = "Descripción: ${equipo.descripcion}")
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Este objeto actualmente NO está disponible (Estado: ${equipo.estado}).",
-                            color = MaterialTheme.colorScheme.error
+                            text = "Estado actual: ${equipo.estado}",
+                            color = if (equipo.estado == "DISPONIBLE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                         )
                     }
                 },
@@ -297,24 +343,16 @@ fun HomeScreenPreview() {
             estado = "DISPONIBLE",
             ubicacion = "Lab 102",
             descripcion = "Multímetro de precisión para pruebas de voltaje"
-        ),
-        Equipo(
-            id = "2",
-            nombre = "Osciloscopio",
-            categoria = "Electrónica",
-            estado = "OCUPADO",
-            ubicacion = "Lab 104",
-            descripcion = "Osciloscopio digital de 2 canales"
         )
     )
 
     val solicitudesFicticias = listOf(
         Solicitud(
             id = "101",
-            equipoId = "2",
-            equipoNombre = "Osciloscopio",
+            equipoId = "1",
+            equipoNombre = "Multímetro Digital",
             ambienteDestino = "Aula 301",
-            proposito = "Práctica libre",
+            proposito = "Práctica de circuitos",
             duracionHoras = 2,
             estado = "PENDIENTE"
         )
@@ -325,7 +363,10 @@ fun HomeScreenPreview() {
             equipos = equiposFicticios,
             solicitudes = solicitudesFicticias,
             mensajeError = null,
-            onSolicitarPrestamo = { _, _, _, _ -> true },
+            userRole = "APRENDIZ",
+            userEmail = "aprendiz@formacion.ctma",
+            onLogout = {},
+            onSolicitarPrestamo = { _, _, _, _, _ -> true },
             onCancelarSolicitud = {},
             onMarcarEntregado = {},
             onLimpiarError = {}

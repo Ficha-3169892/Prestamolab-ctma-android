@@ -7,13 +7,16 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ctma.prestamolab.data.datastore.UserPreferencesRepository
 import com.ctma.prestamolab.data.local.AppDatabase
 import com.ctma.prestamolab.data.repository.RoomRepository
 import com.ctma.prestamolab.ui.screen.HomeScreen
+import com.ctma.prestamolab.ui.screen.LoginScreen
 import com.ctma.prestamolab.ui.theme.PrestamoLabTheme
 import com.ctma.prestamolab.ui.viewmodel.PrestamoViewModel
 
@@ -39,12 +42,30 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            val sessionEmail by viewModel.sessionEmail.collectAsStateWithLifecycle()
+            val sessionRole by viewModel.sessionRole.collectAsStateWithLifecycle()
+
             PrestamoLabTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    HomeScreen(viewModel = viewModel)
+                    if (sessionEmail.isNullOrBlank()) {
+                        LoginScreen(
+                            onLoginSuccess = { email, role ->
+                                viewModel.iniciarSesion(email, role)
+                            }
+                        )
+                    } else {
+                        HomeScreen(
+                            viewModel = viewModel,
+                            userRole = sessionRole ?: "APRENDIZ",
+                            userEmail = sessionEmail ?: "",
+                            onLogout = {
+                                viewModel.cerrarSesion()
+                            }
+                        )
+                    }
                 }
             }
         }
