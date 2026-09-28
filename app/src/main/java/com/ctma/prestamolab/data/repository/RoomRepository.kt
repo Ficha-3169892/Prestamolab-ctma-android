@@ -60,6 +60,17 @@ class RoomRepository(
                 EquipoEntity("4", "Kit Arduino Uno", "Robótica", "DISPONIBLE", "Lab 1", "Kit básico de microcontroladores")
             )
             equipoDao.insertarLista(equiposIniciales)
+
+            val solicitudInicial = ObjetoPrestamo(
+                equipoId = "3",
+                nombre = "Impresora 3D Creality",
+                categoria = "Prototipado (Calibración)",
+                prestatario = "Laboratorio 3 (Práctica de impresión)",
+                fechaPrestamo = "28/09/2026 09:30",
+                estado = "PENDIENTE",
+                evidenciaUri = "content://media/external/images/media/default_3d.jpg"
+            )
+            objetoPrestamoDao.insertar(solicitudInicial)
         }
     }
 }
