@@ -12,5 +12,6 @@ data class ObjetoPrestamo(
     val categoria: String,
     val prestatario: String,
     val fechaPrestamo: String,
-    val estado: String
+    val estado: String,
+    val evidenciaUri: String? = null
 )

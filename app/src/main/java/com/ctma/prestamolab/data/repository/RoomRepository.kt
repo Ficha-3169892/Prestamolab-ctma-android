@@ -24,7 +24,7 @@ class RoomRepository(
         }
     }
 
-    suspend fun guardarPrestamo(equipoId: String, nombre: String, categoria: String, prestatario: String) {
+    suspend fun guardarPrestamo(equipoId: String, nombre: String, categoria: String, prestatario: String, evidenciaUri: String? = null) {
         val fechaActual = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
         val nuevoPrestamo = ObjetoPrestamo(
             equipoId = equipoId,
@@ -32,7 +32,8 @@ class RoomRepository(
             categoria = categoria,
             prestatario = prestatario,
             fechaPrestamo = fechaActual,
-            estado = "PENDIENTE"
+            estado = "PENDIENTE",
+            evidenciaUri = evidenciaUri
         )
         objetoPrestamoDao.insertar(nuevoPrestamo)
         equipoDao.actualizarEstado(equipoId, "RESERVADO")
