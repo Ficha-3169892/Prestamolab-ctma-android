@@ -7,5 +7,6 @@ data class Solicitud(
     val ambienteDestino: String,
     val proposito: String,
     val duracionHoras: Int,
-    val estado: String = "SOLICITADA"
+    val estado: String = "SOLICITADA",
+    val evidenciaUri: String? = null
 )

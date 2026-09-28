@@ -1,5 +1,8 @@
 package com.ctma.prestamolab.ui.screen
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +21,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
@@ -33,14 +37,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ctma.prestamolab.data.model.Equipo
 import com.ctma.prestamolab.data.model.Solicitud
 import com.ctma.prestamolab.ui.state.PrestamoUiState
-import com.ctma.prestamolab.ui.theme.PrestamoLabTheme
 import com.ctma.prestamolab.ui.viewmodel.PrestamoViewModel
+import java.io.File
 
 @Composable
 fun HomeScreen(
@@ -129,7 +134,23 @@ fun HomeScreenContent(
     var ambiente by remember { mutableStateOf("") }
     var proposito by remember { mutableStateOf("") }
     var duracionText by remember { mutableStateOf("1") }
-    var evidenciaUriText by remember { mutableStateOf("content://camera/evidencia_prestamo.jpg") }
+    var evidenciaUri by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+    val photoFile = remember {
+        File(context.cacheDir, "evidencia_${System.currentTimeMillis()}.jpg")
+    }
+    val photoUri = remember {
+        FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photoFile)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            evidenciaUri = photoUri.toString()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -191,7 +212,7 @@ fun HomeScreenContent(
                                     color = if (equipo.estado == "DISPONIBLE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
                                 Text(
-                                    text = "Toca para ver descripción y detalles",
+                                    text = "Toca para ver detalles o solicitar",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -212,6 +233,13 @@ fun HomeScreenContent(
                                 Text(text = "Propósito: ${solicitud.proposito}")
                                 Text(text = "Duración: ${solicitud.duracionHoras} hrs")
                                 Text(text = "Estado: ${solicitud.estado}", style = MaterialTheme.typography.bodyMedium)
+                                if (!solicitud.evidenciaUri.isNullOrBlank()) {
+                                    Text(
+                                        text = "Evidencia: Foto adjunta ✓",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
 
                                 if (userRole == "APRENDIZ" && solicitud.estado == "PENDIENTE") {
                                     Row(
@@ -269,12 +297,15 @@ fun HomeScreenContent(
                             label = { Text("Duración (1-8 horas)") },
                             modifier = Modifier.fillMaxWidth()
                         )
-                        OutlinedTextField(
-                            value = evidenciaUriText,
-                            onValueChange = { evidenciaUriText = it },
-                            label = { Text("Evidencia Fotográfica (Cámara URI)") },
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = { cameraLauncher.launch(photoUri) },
                             modifier = Modifier.fillMaxWidth()
-                        )
+                        ) {
+                            Text(if (evidenciaUri == null) "📸 Tomar Foto con Cámara" else "📸 Foto Capturada Exitosamente ✓")
+                        }
+
                         mensajeError?.let { err ->
                             Text(text = err, color = MaterialTheme.colorScheme.error)
                         }
@@ -284,16 +315,17 @@ fun HomeScreenContent(
                     Button(
                         onClick = {
                             val hrs = duracionText.toIntOrNull() ?: 0
-                            val ok = onSolicitarPrestamo(equipo, ambiente, proposito, hrs, evidenciaUriText)
+                            val ok = onSolicitarPrestamo(equipo, ambiente, proposito, hrs, evidenciaUri)
                             if (ok) {
                                 equipoSeleccionado = null
                                 ambiente = ""
                                 proposito = ""
                                 duracionText = "1"
+                                evidenciaUri = null
                             }
                         }
                     ) {
-                        Text("Confirmar con Cámara")
+                        Text("Confirmar Préstamo")
                     }
                 },
                 dismissButton = {

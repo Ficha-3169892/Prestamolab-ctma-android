@@ -92,7 +92,8 @@ class PrestamoViewModel(
             ambienteDestino = this.prestatario,
             proposito = this.categoria,
             duracionHoras = 1,
-            estado = this.estado
+            estado = this.estado,
+            evidenciaUri = this.evidenciaUri
         )
     }
 

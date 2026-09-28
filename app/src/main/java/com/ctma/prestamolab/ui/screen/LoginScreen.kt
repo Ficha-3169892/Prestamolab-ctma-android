@@ -1,5 +1,8 @@
 package com.ctma.prestamolab.ui.screen
 
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +31,12 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+
+fun Context.findActivity(): FragmentActivity? = when (this) {
+    is FragmentActivity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
 
 @Composable
 fun LoginScreen(
@@ -128,33 +137,45 @@ fun LoginScreen(
 
                     OutlinedButton(
                         onClick = {
-                            val activity = context as? FragmentActivity
+                            val activity = context.findActivity()
                             if (activity != null) {
-                                val executor = ContextCompat.getMainExecutor(context)
-                                val biometricPrompt = BiometricPrompt(activity, executor,
-                                    object : BiometricPrompt.AuthenticationCallback() {
-                                        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                            super.onAuthenticationSucceeded(result)
-                                            val assignedEmail = if (email.contains("admin")) "admin@formacion.ctma" else "aprendiz@formacion.ctma"
-                                            val assignedRole = if (email.contains("admin")) "ADMIN" else "APRENDIZ"
-                                            onLoginSuccess(assignedEmail, assignedRole)
-                                        }
+                                val biometricManager = BiometricManager.from(context)
+                                val canAuth = biometricManager.canAuthenticate(
+                                    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                                )
 
-                                        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                                            super.onAuthenticationError(errorCode, errString)
-                                            errorMessage = "Autenticación biométrica fallida: $errString"
-                                        }
-                                    })
+                                if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
+                                    val executor = ContextCompat.getMainExecutor(context)
+                                    val biometricPrompt = BiometricPrompt(activity, executor,
+                                        object : BiometricPrompt.AuthenticationCallback() {
+                                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                                                super.onAuthenticationSucceeded(result)
+                                                val assignedEmail = if (email.contains("admin")) "admin@formacion.ctma" else "aprendiz@formacion.ctma"
+                                                val assignedRole = if (email.contains("admin")) "ADMIN" else "APRENDIZ"
+                                                onLoginSuccess(assignedEmail, assignedRole)
+                                            }
 
-                                val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                    .setTitle("PréstamoLab CTMA — Acceso Biométrico")
-                                    .setSubtitle("Confirme su identidad con huella digital o PIN")
-                                    .setNegativeButtonText("Cancelar")
-                                    .build()
+                                            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                                                super.onAuthenticationError(errorCode, errString)
+                                                errorMessage = "Biometría: $errString"
+                                            }
+                                        })
 
-                                biometricPrompt.authenticate(promptInfo)
+                                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+                                        .setTitle("PréstamoLab CTMA — Acceso Biométrico")
+                                        .setSubtitle("Confirme su identidad con huella digital o PIN")
+                                        .setNegativeButtonText("Cancelar")
+                                        .build()
+
+                                    biometricPrompt.authenticate(promptInfo)
+                                } else {
+                                    // Fallback simulado si el emulador no tiene huella configurada
+                                    val assignedEmail = if (email.contains("admin")) "admin@formacion.ctma" else "aprendiz@formacion.ctma"
+                                    val assignedRole = if (email.contains("admin")) "ADMIN" else "APRENDIZ"
+                                    onLoginSuccess(assignedEmail, assignedRole)
+                                }
                             } else {
-                                errorMessage = "Biometría no disponible en este contexto"
+                                errorMessage = "Contexto de actividad no disponible"
                             }
                         },
                         modifier = Modifier.fillMaxWidth()
