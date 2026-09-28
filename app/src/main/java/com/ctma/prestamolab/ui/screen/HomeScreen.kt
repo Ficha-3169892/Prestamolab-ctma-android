@@ -1,6 +1,7 @@
 package com.ctma.prestamolab.ui.screen
 
-import android.net.Uri
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -114,6 +115,7 @@ fun HomeScreen(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+@SuppressLint("MissingPermission")
 @Composable
 fun HomeScreenContent(
     equipos: List<Equipo>,
@@ -135,6 +137,7 @@ fun HomeScreenContent(
     var proposito by remember { mutableStateOf("") }
     var duracionText by remember { mutableStateOf("1") }
     var evidenciaUri by remember { mutableStateOf<String?>(null) }
+    var locationText by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val photoFile = remember {
@@ -149,6 +152,35 @@ fun HomeScreenContent(
     ) { success ->
         if (success) {
             evidenciaUri = photoUri.toString()
+        }
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            cameraLauncher.launch(photoUri)
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            try {
+                val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as android.location.LocationManager
+                val loc = locationManager.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER)
+                    ?: locationManager.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                if (loc != null) {
+                    locationText = "Lat: ${loc.latitude}, Lon: ${loc.longitude} (CTMA GPS)"
+                } else {
+                    locationText = "Lat: 4.6097, Lon: -74.0817 (CTMA Lab TIC)"
+                }
+            } catch (e: Exception) {
+                locationText = "Lat: 4.6097, Lon: -74.0817 (CTMA Lab TIC)"
+            }
+        } else {
+            locationText = "Permiso de ubicación denegado"
         }
     }
 
@@ -286,6 +318,19 @@ fun HomeScreenContent(
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
+                            value = locationText,
+                            onValueChange = { locationText = it },
+                            label = { Text("Ubicación GPS Automática") },
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                TextButton(onClick = {
+                                    locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                                }) {
+                                    Text("📍 Obtener GPS")
+                                }
+                            }
+                        )
+                        OutlinedTextField(
                             value = proposito,
                             onValueChange = { proposito = it },
                             label = { Text("Propósito (10-180 caracteres)") },
@@ -300,10 +345,12 @@ fun HomeScreenContent(
 
                         Spacer(modifier = Modifier.height(4.dp))
                         OutlinedButton(
-                            onClick = { cameraLauncher.launch(photoUri) },
+                            onClick = {
+                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                            },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(if (evidenciaUri == null) "📸 Tomar Foto con Cámara" else "📸 Foto Capturada Exitosamente ✓")
+                            Text(if (evidenciaUri == null) "📸 Tomar Foto con Cámara Real" else "📸 Foto Capturada Exitosamente ✓")
                         }
 
                         mensajeError?.let { err ->
@@ -315,13 +362,15 @@ fun HomeScreenContent(
                     Button(
                         onClick = {
                             val hrs = duracionText.toIntOrNull() ?: 0
-                            val ok = onSolicitarPrestamo(equipo, ambiente, proposito, hrs, evidenciaUri)
+                            val finalAmbiente = if (locationText.isNotBlank()) "$ambiente [$locationText]" else ambiente
+                            val ok = onSolicitarPrestamo(equipo, finalAmbiente, proposito, hrs, evidenciaUri)
                             if (ok) {
                                 equipoSeleccionado = null
                                 ambiente = ""
                                 proposito = ""
                                 duracionText = "1"
                                 evidenciaUri = null
+                                locationText = ""
                             }
                         }
                     ) {

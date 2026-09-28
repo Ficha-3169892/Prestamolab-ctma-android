@@ -1,9 +1,5 @@
 package com.ctma.prestamolab.ui.screen
 
-import android.content.Context
-import android.content.ContextWrapper
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,17 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
-
-fun Context.findActivity(): FragmentActivity? = when (this) {
-    is FragmentActivity -> this
-    is ContextWrapper -> baseContext.findActivity()
-    else -> null
-}
 
 @Composable
 fun LoginScreen(
@@ -45,7 +31,6 @@ fun LoginScreen(
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -133,54 +118,6 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Ingresar")
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            val activity = context.findActivity()
-                            if (activity != null) {
-                                val biometricManager = BiometricManager.from(context)
-                                val canAuth = biometricManager.canAuthenticate(
-                                    BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                                )
-
-                                if (canAuth == BiometricManager.BIOMETRIC_SUCCESS) {
-                                    val executor = ContextCompat.getMainExecutor(context)
-                                    val biometricPrompt = BiometricPrompt(activity, executor,
-                                        object : BiometricPrompt.AuthenticationCallback() {
-                                            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
-                                                super.onAuthenticationSucceeded(result)
-                                                val assignedEmail = if (email.contains("admin")) "admin@formacion.ctma" else "aprendiz@formacion.ctma"
-                                                val assignedRole = if (email.contains("admin")) "ADMIN" else "APRENDIZ"
-                                                onLoginSuccess(assignedEmail, assignedRole)
-                                            }
-
-                                            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                                                super.onAuthenticationError(errorCode, errString)
-                                                errorMessage = "Biometría: $errString"
-                                            }
-                                        })
-
-                                    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-                                        .setTitle("PréstamoLab CTMA — Acceso Biométrico")
-                                        .setSubtitle("Confirme su identidad con huella digital o PIN")
-                                        .setNegativeButtonText("Cancelar")
-                                        .build()
-
-                                    biometricPrompt.authenticate(promptInfo)
-                                } else {
-                                    // Fallback simulado si el emulador no tiene huella configurada
-                                    val assignedEmail = if (email.contains("admin")) "admin@formacion.ctma" else "aprendiz@formacion.ctma"
-                                    val assignedRole = if (email.contains("admin")) "ADMIN" else "APRENDIZ"
-                                    onLoginSuccess(assignedEmail, assignedRole)
-                                }
-                            } else {
-                                errorMessage = "Contexto de actividad no disponible"
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Ingresar con Biometría (Huella)")
                     }
                 }
             }
