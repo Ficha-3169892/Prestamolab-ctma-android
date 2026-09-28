@@ -129,7 +129,7 @@ fun HomeScreenContent(
     var ambiente by remember { mutableStateOf("") }
     var proposito by remember { mutableStateOf("") }
     var duracionText by remember { mutableStateOf("1") }
-    var evidenciaUriText by remember { mutableStateOf("content://camera/evidence_default.jpg") }
+    var evidenciaUriText by remember { mutableStateOf("content://camera/evidencia_prestamo.jpg") }
 
     Scaffold(
         topBar = {
@@ -179,11 +179,7 @@ fun HomeScreenContent(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
-                                if (userRole == "APRENDIZ" && equipo.estado == "DISPONIBLE") {
-                                    equipoSeleccionado = equipo
-                                } else {
-                                    equipoDetalle = equipo
-                                }
+                                equipoDetalle = equipo
                             }
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -194,13 +190,11 @@ fun HomeScreenContent(
                                     text = "Estado: ${equipo.estado}",
                                     color = if (equipo.estado == "DISPONIBLE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                                 )
-                                if (userRole == "ADMIN") {
-                                    Text(
-                                        text = "[Modo Admin: Gestión de Inventario habilitada]",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
+                                Text(
+                                    text = "Toca para ver descripción y detalles",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
@@ -236,7 +230,7 @@ fun HomeScreenContent(
                                     }
                                 } else if (userRole == "ADMIN") {
                                     Text(
-                                        text = "[Control Administrativo: Visualizando registro de préstamo global]",
+                                        text = "[Administrador: Solicitud global verificada]",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.tertiary
                                     )
@@ -278,7 +272,7 @@ fun HomeScreenContent(
                         OutlinedTextField(
                             value = evidenciaUriText,
                             onValueChange = { evidenciaUriText = it },
-                            label = { Text("Evidencia Fotográfica (URI cámara)") },
+                            label = { Text("Evidencia Fotográfica (Cámara URI)") },
                             modifier = Modifier.fillMaxWidth()
                         )
                         mensajeError?.let { err ->
@@ -311,13 +305,13 @@ fun HomeScreenContent(
         equipoDetalle?.let { equipo ->
             AlertDialog(
                 onDismissRequest = { equipoDetalle = null },
-                title = { Text("Detalle de Equipo") },
+                title = { Text("Detalle de Equipo: ${equipo.nombre}") },
                 text = {
-                    Column {
-                        Text(text = "Nombre: ${equipo.nombre}")
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(text = "Categoría: ${equipo.categoria}")
                         Text(text = "Ubicación: ${equipo.ubicacion}")
                         Text(text = "Descripción: ${equipo.descripcion}")
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Estado actual: ${equipo.estado}",
                             color = if (equipo.estado == "DISPONIBLE") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -325,51 +319,25 @@ fun HomeScreenContent(
                     }
                 },
                 confirmButton = {
-                    Button(onClick = { equipoDetalle = null }) { Text("Entendido") }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        if (userRole == "APRENDIZ" && equipo.estado == "DISPONIBLE") {
+                            Button(
+                                onClick = {
+                                    val eq = equipo
+                                    equipoDetalle = null
+                                    equipoSeleccionado = eq
+                                }
+                            ) {
+                                Text("Solicitar Préstamo")
+                            }
+                        }
+                        Button(onClick = { equipoDetalle = null }) { Text("Cerrar") }
+                    }
                 }
             )
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun HomeScreenPreview() {
-    val equiposFicticios = listOf(
-        Equipo(
-            id = "1",
-            nombre = "Multímetro Digital",
-            categoria = "Electrónica",
-            estado = "DISPONIBLE",
-            ubicacion = "Lab 102",
-            descripcion = "Multímetro de precisión para pruebas de voltaje"
-        )
-    )
-
-    val solicitudesFicticias = listOf(
-        Solicitud(
-            id = "101",
-            equipoId = "1",
-            equipoNombre = "Multímetro Digital",
-            ambienteDestino = "Aula 301",
-            proposito = "Práctica de circuitos",
-            duracionHoras = 2,
-            estado = "PENDIENTE"
-        )
-    )
-
-    PrestamoLabTheme {
-        HomeScreenContent(
-            equipos = equiposFicticios,
-            solicitudes = solicitudesFicticias,
-            mensajeError = null,
-            userRole = "APRENDIZ",
-            userEmail = "aprendiz@formacion.ctma",
-            onLogout = {},
-            onSolicitarPrestamo = { _, _, _, _, _ -> true },
-            onCancelarSolicitud = {},
-            onMarcarEntregado = {},
-            onLimpiarError = {}
-        )
     }
 }
