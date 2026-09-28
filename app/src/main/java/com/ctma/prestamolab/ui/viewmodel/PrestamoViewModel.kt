@@ -24,6 +24,18 @@ class PrestamoViewModel(
 
     private val _mensajeErrorFormulario = MutableStateFlow<String?>(null)
 
+    val sessionEmail: StateFlow<String?> = userPreferencesRepository?.sessionEmail?.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    ) ?: MutableStateFlow(null)
+
+    val sessionRole: StateFlow<String?> = userPreferencesRepository?.sessionRole?.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    ) ?: MutableStateFlow(null)
+
     init {
         if (roomRepository != null) {
             viewModelScope.launch {
@@ -84,11 +96,24 @@ class PrestamoViewModel(
         )
     }
 
+    fun iniciarSesion(email: String, role: String) {
+        viewModelScope.launch {
+            userPreferencesRepository?.guardarSesion(email, role)
+        }
+    }
+
+    fun cerrarSesion() {
+        viewModelScope.launch {
+            userPreferencesRepository?.cerrarSesion()
+        }
+    }
+
     fun solicitarPrestamo(
         equipo: Equipo,
         ambienteDestino: String,
         proposito: String,
-        duracionHoras: Int
+        duracionHoras: Int,
+        evidenciaUri: String? = null
     ): Boolean {
         if (ambienteDestino.isBlank() || proposito.isBlank()) {
             _mensajeErrorFormulario.value = "Todos los campos son obligatorios"
@@ -114,7 +139,8 @@ class PrestamoViewModel(
                     equipoId = equipo.id,
                     nombre = equipo.nombre,
                     categoria = equipo.categoria,
-                    prestatario = "$ambienteDestino ($proposito)"
+                    prestatario = "$ambienteDestino ($proposito)",
+                    evidenciaUri = evidenciaUri
                 )
             } else {
                 val nuevaSolicitud = Solicitud(
