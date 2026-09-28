@@ -39,6 +39,10 @@ class RoomRepository(
         equipoDao.actualizarEstado(equipoId, "RESERVADO")
     }
 
+    suspend fun guardarEquipo(equipo: EquipoEntity) {
+        equipoDao.insertar(equipo)
+    }
+
     suspend fun actualizarEstadoSolicitud(
         objeto: ObjetoPrestamo,
         nuevoEstado: String,

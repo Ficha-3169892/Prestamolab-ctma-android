@@ -207,6 +207,24 @@ class PrestamoViewModel(
         }
     }
 
+    fun crearEquipo(nombre: String, categoria: String, ubicacion: String, descripcion: String): Boolean {
+        if (nombre.isBlank() || categoria.isBlank() || ubicacion.isBlank()) return false
+        viewModelScope.launch {
+            if (roomRepository != null) {
+                val nuevoEquipo = com.ctma.prestamolab.data.local.EquipoEntity(
+                    id = System.currentTimeMillis().toString(),
+                    nombre = nombre,
+                    categoria = categoria,
+                    estado = "DISPONIBLE",
+                    ubicacion = ubicacion,
+                    descripcion = descripcion
+                )
+                roomRepository.guardarEquipo(nuevoEquipo)
+            }
+        }
+        return true
+    }
+
     fun limpiarError() {
         _mensajeErrorFormulario.value = null
     }

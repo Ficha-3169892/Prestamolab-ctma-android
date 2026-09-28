@@ -21,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -109,6 +110,9 @@ fun HomeScreen(
                 onActualizarFeedback = { solicitud, feedback ->
                     viewModel.actualizarAdminFeedback(solicitud, feedback)
                 },
+                onCrearEquipo = { nombre, categoria, ubicacion, descripcion ->
+                    viewModel.crearEquipo(nombre, categoria, ubicacion, descripcion)
+                },
                 onLimpiarError = {
                     viewModel.limpiarError()
                 }
@@ -131,6 +135,7 @@ fun HomeScreenContent(
     onCancelarSolicitud: (Solicitud) -> Unit,
     onMarcarEntregado: (Solicitud, String?) -> Unit,
     onActualizarFeedback: (Solicitud, String) -> Unit,
+    onCrearEquipo: (String, String, String, String) -> Boolean,
     onLimpiarError: () -> Unit
 ) {
     var tabIndex by remember { mutableIntStateOf(0) }
@@ -138,6 +143,7 @@ fun HomeScreenContent(
     var equipoDetalle by remember { mutableStateOf<Equipo?>(null) }
     var solicitudSeleccionada by remember { mutableStateOf<Solicitud?>(null) }
     var solicitudEntrega by remember { mutableStateOf<Solicitud?>(null) }
+    var showCrearEquipoDialog by remember { mutableStateOf(false) }
 
     var ambiente by remember { mutableStateOf("") }
     var proposito by remember { mutableStateOf("") }
@@ -145,6 +151,11 @@ fun HomeScreenContent(
     var evidenciaUri by remember { mutableStateOf<String?>(null) }
     var evidenciaDevolucion by remember { mutableStateOf<String?>(null) }
     var locationText by remember { mutableStateOf("") }
+
+    var nuevoNombre by remember { mutableStateOf("") }
+    var nuevaCategoria by remember { mutableStateOf("") }
+    var nuevaUbicacion by remember { mutableStateOf("") }
+    var nuevaDescripcion by remember { mutableStateOf("") }
 
     val context = LocalContext.current
     val photoFile = remember {
@@ -217,6 +228,15 @@ fun HomeScreenContent(
                         onClick = { tabIndex = 1 },
                         text = { Text(if (userRole == "ADMIN") "Todas las Solicitudes" else "Mis Solicitudes") }
                     )
+                }
+            }
+        },
+        floatingActionButton = {
+            if (userRole == "ADMIN" && tabIndex == 0) {
+                FloatingActionButton(
+                    onClick = { showCrearEquipoDialog = true }
+                ) {
+                    Text("+", style = MaterialTheme.typography.headlineMedium)
                 }
             }
         }
@@ -415,6 +435,60 @@ fun HomeScreenContent(
                 },
                 dismissButton = {
                     TextButton(onClick = { solicitudEntrega = null }) { Text("Cancelar") }
+                }
+            )
+        }
+
+        if (showCrearEquipoDialog) {
+            AlertDialog(
+                onDismissRequest = { showCrearEquipoDialog = false },
+                title = { Text("Registrar Nuevo Equipo / Herramienta") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = nuevoNombre,
+                            onValueChange = { nuevoNombre = it },
+                            label = { Text("Nombre del Equipo") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = nuevaCategoria,
+                            onValueChange = { nuevaCategoria = it },
+                            label = { Text("Categoría (ej. Electrónica)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = nuevaUbicacion,
+                            onValueChange = { nuevaUbicacion = it },
+                            label = { Text("Ubicación (ej. Lab 1)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = nuevaDescripcion,
+                            onValueChange = { nuevaDescripcion = it },
+                            label = { Text("Descripción") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val ok = onCrearEquipo(nuevoNombre, nuevaCategoria, nuevaUbicacion, nuevaDescripcion)
+                            if (ok) {
+                                showCrearEquipoDialog = false
+                                nuevoNombre = ""
+                                nuevaCategoria = ""
+                                nuevaUbicacion = ""
+                                nuevaDescripcion = ""
+                            }
+                        }
+                    ) {
+                        Text("Guardar Equipo")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCrearEquipoDialog = false }) { Text("Cancelar") }
                 }
             )
         }
