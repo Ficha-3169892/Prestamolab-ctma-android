@@ -74,11 +74,17 @@ dependencies {
     // DataStore Preferences
     implementation(libs.androidx.datastore.preferences)
 
+    // Retrofit & OkHttp
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp)
+
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.sqlite.bundled.host)
+    testImplementation(libs.okhttp.mockwebserver)
     
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
