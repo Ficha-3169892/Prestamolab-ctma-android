@@ -8,5 +8,7 @@ data class Solicitud(
     val proposito: String,
     val duracionHoras: Int,
     val estado: String = "SOLICITADA",
-    val evidenciaUri: String? = null
+    val evidenciaUri: String? = null,
+    val evidenciaDevolucionUri: String? = null,
+    val adminFeedback: String? = null
 )

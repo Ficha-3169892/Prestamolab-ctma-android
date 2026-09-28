@@ -6,7 +6,7 @@ import androidx.room3.Room
 import androidx.room3.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 
-@Database(entities = [ObjetoPrestamo::class, EquipoEntity::class], version = 4)
+@Database(entities = [ObjetoPrestamo::class, EquipoEntity::class], version = 5)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun objetoPrestamoDao(): ObjetoPrestamoDao
     abstract fun equipoDao(): EquipoDao

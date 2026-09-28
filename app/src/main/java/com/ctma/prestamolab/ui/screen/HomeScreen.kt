@@ -103,8 +103,11 @@ fun HomeScreen(
                 onCancelarSolicitud = { solicitud ->
                     viewModel.cancelarSolicitud(solicitud)
                 },
-                onMarcarEntregado = { solicitud ->
-                    viewModel.marcarComoEntregado(solicitud)
+                onMarcarEntregado = { solicitud, evidenciaDevolucion ->
+                    viewModel.marcarComoEntregado(solicitud, evidenciaDevolucion)
+                },
+                onActualizarFeedback = { solicitud, feedback ->
+                    viewModel.actualizarAdminFeedback(solicitud, feedback)
                 },
                 onLimpiarError = {
                     viewModel.limpiarError()
@@ -126,17 +129,21 @@ fun HomeScreenContent(
     onLogout: () -> Unit,
     onSolicitarPrestamo: (Equipo, String, String, Int, String?) -> Boolean,
     onCancelarSolicitud: (Solicitud) -> Unit,
-    onMarcarEntregado: (Solicitud) -> Unit,
+    onMarcarEntregado: (Solicitud, String?) -> Unit,
+    onActualizarFeedback: (Solicitud, String) -> Unit,
     onLimpiarError: () -> Unit
 ) {
     var tabIndex by remember { mutableIntStateOf(0) }
     var equipoSeleccionado by remember { mutableStateOf<Equipo?>(null) }
     var equipoDetalle by remember { mutableStateOf<Equipo?>(null) }
+    var solicitudSeleccionada by remember { mutableStateOf<Solicitud?>(null) }
+    var solicitudEntrega by remember { mutableStateOf<Solicitud?>(null) }
 
     var ambiente by remember { mutableStateOf("") }
     var proposito by remember { mutableStateOf("") }
     var duracionText by remember { mutableStateOf("1") }
     var evidenciaUri by remember { mutableStateOf<String?>(null) }
+    var evidenciaDevolucion by remember { mutableStateOf<String?>(null) }
     var locationText by remember { mutableStateOf("") }
 
     val context = LocalContext.current
@@ -151,7 +158,11 @@ fun HomeScreenContent(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success) {
-            evidenciaUri = photoUri.toString()
+            if (solicitudEntrega != null) {
+                evidenciaDevolucion = photoUri.toString()
+            } else {
+                evidenciaUri = photoUri.toString()
+            }
         }
     }
 
@@ -258,7 +269,12 @@ fun HomeScreenContent(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(solicitudes) { solicitud ->
-                        Card(modifier = Modifier.fillMaxWidth()) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = {
+                                solicitudSeleccionada = solicitud
+                            }
+                        ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(text = "Equipo: ${solicitud.equipoNombre}", style = MaterialTheme.typography.titleMedium)
                                 Text(text = "Destino: ${solicitud.ambienteDestino}")
@@ -267,11 +283,32 @@ fun HomeScreenContent(
                                 Text(text = "Estado: ${solicitud.estado}", style = MaterialTheme.typography.bodyMedium)
                                 if (!solicitud.evidenciaUri.isNullOrBlank()) {
                                     Text(
-                                        text = "Evidencia: Foto adjunta ✓",
+                                        text = "Evidencia Préstamo: Adjunta ✓",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                 }
+                                if (!solicitud.evidenciaDevolucionUri.isNullOrBlank()) {
+                                    Text(
+                                        text = "Evidencia Devolución: Adjunta ✓",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                if (!solicitud.adminFeedback.isNullOrBlank()) {
+                                    Text(
+                                        text = "Feedback Admin: ${solicitud.adminFeedback}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+
+                                Text(
+                                    text = "Toca para ver detalles completos y evidencias",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.tertiary,
+                                    modifier = Modifier.padding(top = 4.dp)
+                                )
 
                                 if (userRole == "APRENDIZ" && solicitud.estado == "PENDIENTE") {
                                     Row(
@@ -284,22 +321,102 @@ fun HomeScreenContent(
                                             Text("Cancelar")
                                         }
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Button(onClick = { onMarcarEntregado(solicitud) }) {
+                                        Button(onClick = { solicitudEntrega = solicitud }) {
                                             Text("Marcar Entregado")
                                         }
                                     }
-                                } else if (userRole == "ADMIN") {
-                                    Text(
-                                        text = "[Administrador: Solicitud global verificada]",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.tertiary
-                                    )
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+
+        solicitudSeleccionada?.let { solicitud ->
+            AlertDialog(
+                onDismissRequest = { solicitudSeleccionada = null },
+                title = { Text("Detalle de Solicitud: ${solicitud.equipoNombre}") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(text = "Destino: ${solicitud.ambienteDestino}")
+                        Text(text = "Propósito: ${solicitud.proposito}")
+                        Text(text = "Duración: ${solicitud.duracionHoras} hrs")
+                        Text(text = "Estado: ${solicitud.estado}")
+
+                        if (!solicitud.evidenciaUri.isNullOrBlank()) {
+                            Text(text = "Evidencia Préstamo: ${solicitud.evidenciaUri}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                        if (!solicitud.evidenciaDevolucionUri.isNullOrBlank()) {
+                            Text(text = "Evidencia Devolución: ${solicitud.evidenciaDevolucionUri}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(text = "Feedback del Administrador:", style = MaterialTheme.typography.titleSmall)
+
+                        if (userRole == "ADMIN") {
+                            var feedbackInput by remember { mutableStateOf(solicitud.adminFeedback ?: "") }
+                            OutlinedTextField(
+                                value = feedbackInput,
+                                onValueChange = { feedbackInput = it },
+                                label = { Text("Escribir feedback o novedad") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Button(
+                                onClick = {
+                                    onActualizarFeedback(solicitud, feedbackInput)
+                                    solicitudSeleccionada = null
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Guardar Feedback")
+                            }
+                        } else {
+                            Text(
+                                text = solicitud.adminFeedback ?: "Sin feedback del administrador aún.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = { solicitudSeleccionada = null }) { Text("Cerrar") }
+                }
+            )
+        }
+
+        solicitudEntrega?.let { solicitud ->
+            AlertDialog(
+                onDismissRequest = { solicitudEntrega = null },
+                title = { Text("Devolución: ${solicitud.equipoNombre}") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Tome una foto de evidencia del estado de devolución del equipo.")
+                        OutlinedButton(
+                            onClick = {
+                                cameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (evidenciaDevolucion == null) "📸 Tomar Foto de Devolución" else "📸 Foto Devolución Capturada ✓")
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        onMarcarEntregado(solicitud, evidenciaDevolucion)
+                        solicitudEntrega = null
+                        evidenciaDevolucion = null
+                    }) {
+                        Text("Confirmar Entrega")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { solicitudEntrega = null }) { Text("Cancelar") }
+                }
+            )
         }
 
         equipoSeleccionado?.let { equipo ->

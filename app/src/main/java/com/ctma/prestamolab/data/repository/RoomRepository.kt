@@ -39,8 +39,18 @@ class RoomRepository(
         equipoDao.actualizarEstado(equipoId, "RESERVADO")
     }
 
-    suspend fun actualizarEstadoSolicitud(objeto: ObjetoPrestamo, nuevoEstado: String) {
-        objetoPrestamoDao.actualizar(objeto.copy(estado = nuevoEstado))
+    suspend fun actualizarEstadoSolicitud(
+        objeto: ObjetoPrestamo,
+        nuevoEstado: String,
+        evidenciaDevolucionUri: String? = null,
+        adminFeedback: String? = null
+    ) {
+        val actualizado = objeto.copy(
+            estado = nuevoEstado,
+            evidenciaDevolucionUri = evidenciaDevolucionUri ?: objeto.evidenciaDevolucionUri,
+            adminFeedback = adminFeedback ?: objeto.adminFeedback
+        )
+        objetoPrestamoDao.actualizar(actualizado)
         if (nuevoEstado == "ENTREGADO" || nuevoEstado == "CANCELADA") {
             equipoDao.actualizarEstado(objeto.equipoId, "DISPONIBLE")
         }

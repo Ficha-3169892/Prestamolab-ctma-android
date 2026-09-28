@@ -93,7 +93,9 @@ class PrestamoViewModel(
             proposito = this.categoria,
             duracionHoras = 1,
             estado = this.estado,
-            evidenciaUri = this.evidenciaUri
+            evidenciaUri = this.evidenciaUri,
+            evidenciaDevolucionUri = this.evidenciaDevolucionUri,
+            adminFeedback = this.adminFeedback
         )
     }
 
@@ -162,18 +164,32 @@ class PrestamoViewModel(
         return true
     }
 
-    fun marcarComoEntregado(solicitud: Solicitud) {
+    fun marcarComoEntregado(solicitud: Solicitud, evidenciaDevolucionUri: String? = null) {
         viewModelScope.launch {
             if (roomRepository != null) {
                 val idInt = solicitud.id.toIntOrNull()
                 if (idInt != null) {
                     val actual = solicitudesRaw.find { it.id == idInt }
                     if (actual != null) {
-                        roomRepository.actualizarEstadoSolicitud(actual, "ENTREGADO")
+                        roomRepository.actualizarEstadoSolicitud(actual, "ENTREGADO", evidenciaDevolucionUri = evidenciaDevolucionUri)
                     }
                 }
             } else {
                 inMemoryRepository.actualizarEstadoEquipo(solicitud.equipoId, "DISPONIBLE")
+            }
+        }
+    }
+
+    fun actualizarAdminFeedback(solicitud: Solicitud, feedback: String) {
+        viewModelScope.launch {
+            if (roomRepository != null) {
+                val idInt = solicitud.id.toIntOrNull()
+                if (idInt != null) {
+                    val actual = solicitudesRaw.find { it.id == idInt }
+                    if (actual != null) {
+                        roomRepository.actualizarEstadoSolicitud(actual, actual.estado, adminFeedback = feedback)
+                    }
+                }
             }
         }
     }
